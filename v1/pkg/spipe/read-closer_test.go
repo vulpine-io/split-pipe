@@ -13,6 +13,7 @@ type testRc struct {
 	io.Reader
 	cl func() error
 }
+
 func (t testRc) Close() error {
 	return t.cl()
 }
@@ -136,7 +137,7 @@ func TestMultiReadCloser_Close(t *testing.T) {
 	Convey("MultiReadCloser.Close", t, func() {
 		Convey("no errors", func() {
 			val := 0
-			fn  := func() error { val++; return nil }
+			fn := func() error { val++; return nil }
 
 			readers := []io.ReadCloser{
 				testRc{cl: fn},

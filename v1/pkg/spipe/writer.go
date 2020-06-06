@@ -2,6 +2,8 @@ package spipe
 
 import "io"
 
+// SplitWriter defines an io.Writer implementation that writes to multiple
+// outputs.
 type SplitWriter interface {
 	io.Writer
 
@@ -10,6 +12,8 @@ type SplitWriter interface {
 	IgnoreErrors(bool) SplitWriter
 }
 
+// NewSplitWriter constructs a new SplitWriter instance with the given primary
+// and secondary writers.
 func NewSplitWriter(raw io.Writer, addtl ...io.Writer) SplitWriter {
 	return &splitWriter{primary: raw, secondary: addtl}
 }

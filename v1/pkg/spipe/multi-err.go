@@ -37,4 +37,3 @@ func (m *multiError) Error() string {
 func (m *multiError) Errors() []error {
 	return m.errs
 }
-

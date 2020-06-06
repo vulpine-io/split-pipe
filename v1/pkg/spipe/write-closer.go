@@ -2,22 +2,26 @@ package spipe
 
 import "io"
 
-func NewSplitWriteCloser(
-	raw io.WriteCloser,
-	addtl ...io.WriteCloser,
-) SplitWriteCloser {
-	return &splitWriteCloser{
-		primary:    raw,
-		secondary:  addtl,
-	}
-}
-
+// SplitWriteCloser defines an io.WriteCloser implementation that writes to and
+// can close multiple outputs.
 type SplitWriteCloser interface {
 	io.WriteCloser
 
 	// IgnoreErrors sets whether or not the split writer should ignore errors
 	// returned from secondary writers.
 	IgnoreErrors(bool) SplitWriteCloser
+}
+
+// NewSplitWriteCloser constructs a new SplitWriteCloser instance with the given
+// primary and secondary writers.
+func NewSplitWriteCloser(
+	raw io.WriteCloser,
+	addtl ...io.WriteCloser,
+) SplitWriteCloser {
+	return &splitWriteCloser{
+		primary:   raw,
+		secondary: addtl,
+	}
 }
 
 type splitWriteCloser struct {

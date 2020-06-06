@@ -2,10 +2,17 @@ package spipe
 
 import "io"
 
+// MultiReader defines an io.Reader implementation that can read from multiple
+// input streams as if they were one long stream.
+//
+// The input streams will be read to completion in the order they are given to
+// the MultiReader instance.
 type MultiReader interface {
 	io.Reader
 }
 
+// NewMultiReader returns a new MultiReader instance that will read from the
+// given inputs in the order they are passed.
 func NewMultiReader(inputs ...io.Reader) MultiReader {
 	return &multiReader{inputs}
 }
@@ -19,7 +26,7 @@ func (m *multiReader) Read(p []byte) (n int, err error) {
 		return 0, io.EOF
 	}
 
-	ln  := len(p)
+	ln := len(p)
 	n, err = m.nextInput().Read(p)
 	if err != nil && err != io.EOF {
 		return n, err
@@ -58,4 +65,3 @@ func (m *multiReader) popInput() {
 
 	m.inputs = m.inputs[1:]
 }
-

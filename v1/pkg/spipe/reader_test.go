@@ -77,4 +77,3 @@ func TestMultiReader_Read(t *testing.T) {
 		})
 	})
 }
-

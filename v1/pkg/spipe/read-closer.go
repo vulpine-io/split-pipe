@@ -2,6 +2,14 @@ package spipe
 
 import "io"
 
+// MultiReadCloser defines an io.ReadCloser implementation that can read from
+// and close multiple input streams as if they were one long stream.
+//
+// The input streams will be read to completion in the order they are given to
+// the MultiReader instance.
+//
+// If the CloseImmediately option is set to true, the given streams will be
+// closed, in order, as soon as they hit EOF.
 type MultiReadCloser interface {
 	io.ReadCloser
 
@@ -10,12 +18,14 @@ type MultiReadCloser interface {
 	CloseImmediately(bool) MultiReadCloser
 }
 
+// NewMultiReadCloser returns a new MultiReadCloser instance that will read from
+// the given inputs in the order they are passed.
 func NewMultiReadCloser(inputs ...io.ReadCloser) MultiReadCloser {
 	return &multiReadCloser{inputs: inputs}
 }
 
 type multiReadCloser struct {
-	inputs []io.ReadCloser
+	inputs   []io.ReadCloser
 	aggClose bool
 }
 
@@ -45,7 +55,7 @@ func (m *multiReadCloser) Read(p []byte) (n int, err error) {
 		return 0, io.EOF
 	}
 
-	ln  := len(p)
+	ln := len(p)
 	n, err = m.nextInput().Read(p)
 	if err != nil && err != io.EOF {
 		return n, err
@@ -98,4 +108,3 @@ func (m *multiReadCloser) popInput() (err error) {
 
 	return
 }
-

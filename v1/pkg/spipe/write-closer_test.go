@@ -43,7 +43,7 @@ func TestSplitWriteCloser_Close(t *testing.T) {
 			c := &testWC{cl: fun}
 
 			test := spipe.NewSplitWriteCloser(a, b, c)
-			err  := test.Close()
+			err := test.Close()
 
 			So(err, ShouldBeNil)
 			So(val, ShouldEqual, 3)
