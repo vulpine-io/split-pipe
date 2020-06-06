@@ -14,7 +14,7 @@ func NewEOFReadCloser() io.ReadCloser {
 	return eofer{}
 }
 
-type eofer struct {}
+type eofer struct{}
 
 func (e eofer) Read([]byte) (int, error) {
 	return 0, io.EOF

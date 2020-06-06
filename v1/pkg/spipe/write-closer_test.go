@@ -34,7 +34,6 @@ func TestSplitWriteCloser_Write(t *testing.T) {
 		So(b.String(), ShouldEqual, "hello")
 		So(c.String(), ShouldEqual, "hello")
 
-
 		Convey("failing secondary", func() {
 
 			Convey("without ignore", func() {
