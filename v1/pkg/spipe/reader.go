@@ -18,6 +18,18 @@ type MultiReader interface {
 // implementation will proactively start reading from a secondary stream in a
 // single Read call.  The stdlib MultiReader returns from the Read call as soon
 // as a single, non-empty stream is exhausted.
+//
+// In practice, the following code
+//     buffer := make([]byte, 512)
+//     spipe.NewMultiReader(reader1, reader2).Read(buffer)
+//
+// is functionally closer to
+//     buffer := bytes.NewBuffer(make([]byte, 0, 512))
+//     io.Copy(buffer, io.MultiReader(reader1, reader2))
+//
+// than it is to
+//     buffer := make([]byte, 512)
+//     io.MultiReader(reader1, reader2).Read(buffer)
 func NewMultiReader(inputs ...io.Reader) MultiReader {
 	return &multiReader{inputs}
 }
@@ -38,18 +50,6 @@ type multiReader struct {
 // than len(p) bytes any time it encounters the end of a single stream, whereas
 // this method will automatically continue on to the next stream in a single
 // call to Read in order to fill the input buffer.
-//
-// In practice, the following code
-//     buffer := make([]byte, 512)
-//     spipe.NewMultiReader(reader1, reader2).Read(buffer)
-//
-// is functionally closer to
-//     buffer := bytes.NewBuffer(make([]byte, 0, 512))
-//     io.Copy(buffer, io.MultiReader(reader1, reader2))
-//
-// than it is to
-//     buffer := make([]byte, 512)
-//     io.MultiReader(reader1, reader2).Read(buffer)
 func (m *multiReader) Read(p []byte) (totalRead int, err error) {
 	return internalRead(m, p)
 }
