@@ -21,71 +21,16 @@ func (t testRc) Close() error {
 
 func TestMultiReadCloser_Read(t *testing.T) {
 	Convey("MultiReadCloser.Read", t, func() {
-		Convey("full read", func() {
-			readers := []io.ReadCloser{
-				testRc{Reader: strings.NewReader("abc")},
-				testRc{Reader: strings.NewReader("def")},
-				testRc{Reader: strings.NewReader("ghi")},
-				testRc{Reader: strings.NewReader("jkl")},
-				testRc{Reader: strings.NewReader("mno")},
+		fun := func(i interface{}) io.Reader {
+			tmp := i.([]io.Reader)
+			par := make([]io.ReadCloser, len(tmp))
+			for i, r := range tmp {
+				par[i] = testRc{Reader: r}
 			}
+			return spipe.NewMultiReadCloser(par...)
+		}
 
-			test := spipe.NewMultiReadCloser(readers...)
-			buff := make([]byte, 18)
-
-			n, e := test.Read(buff)
-
-			So(e, ShouldBeNil)
-			So(n, ShouldEqual, 15)
-			So(string(buff[:15]), ShouldResemble, "abcdefghijklmno")
-
-			n, e = test.Read(buff)
-
-			So(e, ShouldEqual, io.EOF)
-			So(n, ShouldEqual, 0)
-		})
-
-		Convey("chunk read", func() {
-			readers := []io.ReadCloser{
-				testRc{Reader: strings.NewReader("abc")},
-				testRc{Reader: strings.NewReader("def")},
-				testRc{Reader: strings.NewReader("ghi")},
-				testRc{Reader: strings.NewReader("jkl")},
-				testRc{Reader: strings.NewReader("mno")},
-			}
-
-			test := spipe.NewMultiReadCloser(readers...)
-			buff := make([]byte, 4)
-
-			n, e := test.Read(buff)
-
-			So(e, ShouldBeNil)
-			So(n, ShouldEqual, 4)
-			So(string(buff), ShouldEqual, "abcd")
-
-			n, e = test.Read(buff)
-
-			So(e, ShouldBeNil)
-			So(n, ShouldEqual, 4)
-			So(string(buff), ShouldEqual, "efgh")
-
-			n, e = test.Read(buff)
-
-			So(e, ShouldBeNil)
-			So(n, ShouldEqual, 4)
-			So(string(buff), ShouldEqual, "ijkl")
-
-			n, e = test.Read(buff)
-
-			So(e, ShouldBeNil)
-			So(n, ShouldEqual, 3)
-			So(string(buff), ShouldEqual, "mnol")
-
-			n, e = test.Read(buff)
-
-			So(e, ShouldEqual, io.EOF)
-			So(n, ShouldEqual, 0)
-		})
+		tReaderComm(fun)
 
 		Convey("aggressive close", func() {
 			val := 0
@@ -132,48 +77,38 @@ func TestMultiReadCloser_Read(t *testing.T) {
 			So(val, ShouldEqual, 5)
 		})
 
-		Convey("erroring reader", func() {
-			okRead := &iotest.ReadCloser{
-				ReadableData: []byte("abcdefghi"),
-				ReadCounts: []int{3, 3, 3},
-			}
-			readers := []io.ReadCloser{
-				okRead,
-				okRead,
-				&iotest.ReadCloser{ReadErrors: []error{errors.New("hola")}},
-				okRead,
-			}
-
-			test := spipe.NewMultiReadCloser(readers...)
-			buff := make([]byte, 15)
-
-			_, e := test.Read(buff)
-
-			So(e, ShouldResemble, errors.New("hola"))
-		})
-
-
 		Convey("erroring closer", func() {
-			okRead := &iotest.ReadCloser{
+			okRead1 := &iotest.ReadCloser{
 				ReadableData: []byte("abcdefghi"),
-				ReadCounts: []int{3, 3, 3},
+				ReadCounts:   []int{3, 0},
+				ReadErrors:   []error{nil, io.EOF},
+			}
+
+			okRead2 := &iotest.ReadCloser{
+				ReadableData: []byte("abcdefghi"),
+				ReadCounts:   []int{3, 0},
+				ReadErrors:   []error{nil, io.EOF},
 			}
 
 			badClose := &iotest.ReadCloser{
+				ReadErrors:  []error{io.EOF},
 				CloseErrors: []error{errors.New("hola")},
-				ReadCounts: []int{0},
+				ReadCounts:  []int{0},
 			}
 
-			readers := []io.ReadCloser{okRead, okRead, badClose, okRead}
+			readers := []io.ReadCloser{okRead1, okRead2, badClose, okRead1}
 
 			test := spipe.NewMultiReadCloser(readers...).CloseImmediately(true)
 			buff := make([]byte, 15)
 
 			_, e := test.Read(buff)
 
+			So(okRead1.ReadCalls, ShouldEqual, 2)
+			So(okRead1.CloseCalls, ShouldEqual, 1)
+			So(okRead2.ReadCalls, ShouldEqual, 2)
+			So(okRead2.CloseCalls, ShouldEqual, 1)
+			So(badClose.ReadCalls, ShouldEqual, 1)
 			So(badClose.CloseCalls, ShouldEqual, 1)
-			So(okRead.ReadCalls, ShouldEqual, 2)
-			So(okRead.CloseCalls, ShouldEqual, 2)
 			So(e, ShouldResemble, errors.New("hola"))
 		})
 	})

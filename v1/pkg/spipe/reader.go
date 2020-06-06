@@ -26,32 +26,32 @@ type multiReader struct {
 	inputs []io.Reader
 }
 
-func (m *multiReader) Read(p []byte) (n int, err error) {
-	if !m.hasNext() {
-		return 0, io.EOF
-	}
-
-	ln := len(p)
-	n, err = m.nextInput().Read(p)
-	if err != nil && err != io.EOF {
-		return n, err
-	}
-
-	if n < ln {
-		m.popInput()
-
-		m, err := m.Read(p[n:])
-
-		if n > 0 && err == io.EOF {
-			err = nil
-		}
-
-		n += m
-
-		return n, err
-	}
-
-	return
+// Read attempts to fill the given buffer by reading from one or more available
+// streams until it runs out of input, or the len(p) bytes have been read.
+//
+// If read returns a bytes-read count > 0, it will not return an EOF.  If a read
+// reaches the end of all available inputs, the total number of bytes read will
+// be returned with a nil error, and subsequent calls will return an EOF.
+//
+// This method behaves differently than the current version of `io.MultiWriter`
+// (as of v1.14.4) in that the `io.MultiWriter` implementation will read less
+// than len(p) bytes any time it encounters the end of a single stream, whereas
+// this method will automatically continue on to the next stream in a single
+// call to Read in order to fill the input buffer.
+//
+// In practice, the following code
+//     buffer := make([]byte, 512)
+//     spipe.NewMultiReader(reader1, reader2).Read(buffer)
+//
+// is functionally closer to
+//     buffer := bytes.NewBuffer(make([]byte, 0, 512))
+//     io.Copy(buffer, io.MultiReader(reader1, reader2))
+//
+// than it is to
+//     buffer := make([]byte, 512)
+//     io.MultiReader(reader1, reader2).Read(buffer)
+func (m *multiReader) Read(p []byte) (totalRead int, err error) {
+	return internalRead(m, p)
 }
 
 func (m *multiReader) hasNext() bool {
@@ -62,7 +62,7 @@ func (m *multiReader) nextInput() io.Reader {
 	return m.inputs[0]
 }
 
-func (m *multiReader) popInput() {
+func (m *multiReader) popInput() (_ error) {
 	if len(m.inputs) < 2 {
 		m.inputs = nil
 		return
@@ -73,4 +73,6 @@ func (m *multiReader) popInput() {
 
 	// subset the input readers
 	m.inputs = m.inputs[1:]
+
+	return
 }

@@ -2,6 +2,7 @@ package spipe_test
 
 import (
 	"errors"
+	"io"
 	"strings"
 	"testing"
 
@@ -91,6 +92,47 @@ func TestSplitWriter_Write(t *testing.T) {
 				So(a.WrittenBytes, ShouldResemble, []byte("hello"))
 				So(b.String(), ShouldEqual, "")
 				So(c.String(), ShouldEqual, "")
+			})
+		})
+
+		Convey("short write", func() {
+			Convey("on primary", func() {
+				a := &WriteCloser{WriteCounts: []int{1}}
+				b := &WriteCloser{}
+
+				test := spipe.NewSplitWriter(a, b)
+				n, err := test.Write([]byte("hello"))
+
+				So(err, ShouldEqual, io.ErrShortWrite)
+				So(n, ShouldEqual, 1)
+				So(b.WriteCalls, ShouldEqual, 0)
+			})
+
+			Convey("on secondary", func() {
+				Convey("without ignore errors", func() {
+					a := &WriteCloser{}
+					b := &WriteCloser{WriteCounts: []int{1}}
+
+					test := spipe.NewSplitWriter(a, b)
+					n, err := test.Write([]byte("hello"))
+
+					So(string(a.WrittenBytes), ShouldEqual, "hello")
+					So(n, ShouldEqual, 1)
+					So(err, ShouldEqual, io.ErrShortWrite)
+				})
+
+				Convey("with ignore errors", func() {
+					a := &WriteCloser{}
+					b := &WriteCloser{WriteCounts: []int{1}}
+
+					test := spipe.NewSplitWriter(a, b).IgnoreErrors(true)
+					n, err := test.Write([]byte("hello"))
+
+					So(string(a.WrittenBytes), ShouldEqual, "hello")
+					So(n, ShouldEqual, 5)
+					So(err, ShouldBeNil)
+				})
+
 			})
 		})
 
