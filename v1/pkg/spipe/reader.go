@@ -13,6 +13,11 @@ type MultiReader interface {
 
 // NewMultiReader returns a new MultiReader instance that will read from the
 // given inputs in the order they are passed.
+//
+// This operates in a manner different to `io.MultiReader` in that this
+// implementation will proactively start reading from a secondary stream in a
+// single Read call.  The stdlib MultiReader returns from the Read call as soon
+// as a single, non-empty stream is exhausted.
 func NewMultiReader(inputs ...io.Reader) MultiReader {
 	return &multiReader{inputs}
 }
@@ -63,5 +68,9 @@ func (m *multiReader) popInput() {
 		return
 	}
 
+	// explicitly free the reference to the exhausted reader.
+	m.inputs[0] = nil
+
+	// subset the input readers
 	m.inputs = m.inputs[1:]
 }
