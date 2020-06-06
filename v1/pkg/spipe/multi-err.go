@@ -2,12 +2,16 @@ package spipe
 
 import "strings"
 
+// MultiError wraps a slice of errors into a single error type.
 type MultiError interface {
 	error
 
+	// Errors returns the original errors backing this error.
 	Errors() []error
 }
 
+// NewMultiError constructs a new MultiError instance from the given slice of
+// errors.
 func NewMultiError(errs []error) MultiError {
 	return &multiError{errs}
 }

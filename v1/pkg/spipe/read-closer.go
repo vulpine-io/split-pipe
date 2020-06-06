@@ -4,14 +4,19 @@ import "io"
 
 type MultiReadCloser interface {
 	io.ReadCloser
+
+	// CloseImmediately controls whether the input readers will be closed as soon
+	// as they are consumed rather than waiting for a Close call.
+	CloseImmediately(bool) MultiReadCloser
 }
 
 func NewMultiReadCloser(inputs ...io.ReadCloser) MultiReadCloser {
-	return &multiReadCloser{inputs}
+	return &multiReadCloser{inputs: inputs}
 }
 
 type multiReadCloser struct {
 	inputs []io.ReadCloser
+	aggClose bool
 }
 
 func (m *multiReadCloser) Close() (err error) {
@@ -30,6 +35,11 @@ func (m *multiReadCloser) Close() (err error) {
 	return
 }
 
+func (m *multiReadCloser) CloseImmediately(b bool) MultiReadCloser {
+	m.aggClose = b
+	return m
+}
+
 func (m *multiReadCloser) Read(p []byte) (n int, err error) {
 	if !m.hasNext() {
 		return 0, io.EOF
@@ -42,7 +52,9 @@ func (m *multiReadCloser) Read(p []byte) (n int, err error) {
 	}
 
 	if n < ln {
-		m.popInput()
+		if err := m.popInput(); err != nil {
+			return n, err
+		}
 
 		m, err := m.Read(p[n:])
 
@@ -66,12 +78,24 @@ func (m *multiReadCloser) nextInput() io.Reader {
 	return m.inputs[0]
 }
 
-func (m *multiReadCloser) popInput() {
-	if len(m.inputs) < 2 {
+func (m *multiReadCloser) popInput() (err error) {
+	switch len(m.inputs) {
+	case 0:
+		return
+	case 1:
+		if m.aggClose {
+			err = m.inputs[0].Close()
+		}
 		m.inputs = nil
 		return
 	}
 
+	if m.aggClose {
+		err = m.inputs[0].Close()
+	}
+
 	m.inputs = m.inputs[1:]
+
+	return
 }
 

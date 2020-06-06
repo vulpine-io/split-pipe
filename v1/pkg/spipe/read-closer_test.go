@@ -84,6 +84,51 @@ func TestMultiReadCloser_Read(t *testing.T) {
 			So(e, ShouldEqual, io.EOF)
 			So(n, ShouldEqual, 0)
 		})
+
+		Convey("aggressive close", func() {
+			val := 0
+			fun := func() error { val++; return nil }
+
+			readers := []io.ReadCloser{
+				testRc{Reader: strings.NewReader("abc"), cl: fun},
+				testRc{Reader: strings.NewReader("def"), cl: fun},
+				testRc{Reader: strings.NewReader("ghi"), cl: fun},
+				testRc{Reader: strings.NewReader("jkl"), cl: fun},
+				testRc{Reader: strings.NewReader("mno"), cl: fun},
+			}
+
+			test := spipe.NewMultiReadCloser(readers...).CloseImmediately(true)
+			buff := make([]byte, 4)
+
+			n, e := test.Read(buff)
+
+			So(e, ShouldBeNil)
+			So(n, ShouldEqual, 4)
+			So(val, ShouldEqual, 1)
+
+			n, e = test.Read(buff)
+
+			So(e, ShouldBeNil)
+			So(n, ShouldEqual, 4)
+			So(val, ShouldEqual, 2)
+
+			n, e = test.Read(buff)
+
+			So(e, ShouldBeNil)
+			So(n, ShouldEqual, 4)
+			So(val, ShouldEqual, 3)
+
+			n, e = test.Read(buff)
+
+			So(e, ShouldBeNil)
+			So(n, ShouldEqual, 3)
+			So(val, ShouldEqual, 5)
+
+			e = test.Close()
+
+			So(e, ShouldEqual, nil)
+			So(val, ShouldEqual, 5)
+		})
 	})
 }
 
