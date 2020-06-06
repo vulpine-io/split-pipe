@@ -89,14 +89,14 @@ func (m *multiReadCloser) nextInput() io.Reader {
 }
 
 func (m *multiReadCloser) popInput() (err error) {
-	switch len(m.inputs) {
-	case 0:
-		return
-	case 1:
+	// 0 case is not possible due to hasNext call in read
+	if len(m.inputs) == 1 {
 		if m.aggClose {
 			err = m.inputs[0].Close()
 		}
+
 		m.inputs = nil
+
 		return
 	}
 

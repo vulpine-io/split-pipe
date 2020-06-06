@@ -3,6 +3,7 @@ package spipe_test
 import (
 	"errors"
 	. "github.com/smartystreets/goconvey/convey"
+	"github.com/vulpine-io/io-test/v1/pkg/iotest"
 	"github.com/vulpine-io/split-pipe/v1/pkg/spipe"
 	"io"
 	"strings"
@@ -30,13 +31,13 @@ func TestMultiReadCloser_Read(t *testing.T) {
 			}
 
 			test := spipe.NewMultiReadCloser(readers...)
-			buff := make([]byte, 15)
+			buff := make([]byte, 18)
 
 			n, e := test.Read(buff)
 
 			So(e, ShouldBeNil)
 			So(n, ShouldEqual, 15)
-			So(string(buff), ShouldEqual, "abcdefghijklmno")
+			So(string(buff[:15]), ShouldResemble, "abcdefghijklmno")
 
 			n, e = test.Read(buff)
 
@@ -129,6 +130,51 @@ func TestMultiReadCloser_Read(t *testing.T) {
 
 			So(e, ShouldEqual, nil)
 			So(val, ShouldEqual, 5)
+		})
+
+		Convey("erroring reader", func() {
+			okRead := &iotest.ReadCloser{
+				ReadableData: []byte("abcdefghi"),
+				ReadCounts: []int{3, 3, 3},
+			}
+			readers := []io.ReadCloser{
+				okRead,
+				okRead,
+				&iotest.ReadCloser{ReadErrors: []error{errors.New("hola")}},
+				okRead,
+			}
+
+			test := spipe.NewMultiReadCloser(readers...)
+			buff := make([]byte, 15)
+
+			_, e := test.Read(buff)
+
+			So(e, ShouldResemble, errors.New("hola"))
+		})
+
+
+		Convey("erroring closer", func() {
+			okRead := &iotest.ReadCloser{
+				ReadableData: []byte("abcdefghi"),
+				ReadCounts: []int{3, 3, 3},
+			}
+
+			badClose := &iotest.ReadCloser{
+				CloseErrors: []error{errors.New("hola")},
+				ReadCounts: []int{0},
+			}
+
+			readers := []io.ReadCloser{okRead, okRead, badClose, okRead}
+
+			test := spipe.NewMultiReadCloser(readers...).CloseImmediately(true)
+			buff := make([]byte, 15)
+
+			_, e := test.Read(buff)
+
+			So(badClose.CloseCalls, ShouldEqual, 1)
+			So(okRead.ReadCalls, ShouldEqual, 2)
+			So(okRead.CloseCalls, ShouldEqual, 2)
+			So(e, ShouldResemble, errors.New("hola"))
 		})
 	})
 }

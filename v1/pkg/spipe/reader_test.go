@@ -1,7 +1,9 @@
 package spipe_test
 
 import (
+	"errors"
 	. "github.com/smartystreets/goconvey/convey"
+	"github.com/vulpine-io/io-test/v1/pkg/iotest"
 	"github.com/vulpine-io/split-pipe/v1/pkg/spipe"
 	"io"
 	"strings"
@@ -74,6 +76,22 @@ func TestMultiReader_Read(t *testing.T) {
 
 			So(e, ShouldEqual, io.EOF)
 			So(n, ShouldEqual, 0)
+		})
+
+		Convey("erroring reader", func() {
+			readers := []io.Reader{
+				strings.NewReader("abc"),
+				strings.NewReader("def"),
+				&iotest.ReadCloser{ReadErrors: []error{errors.New("hola")}},
+				strings.NewReader("ghi"),
+			}
+
+			test := spipe.NewMultiReader(readers...)
+			buff := make([]byte, 15)
+
+			_, e := test.Read(buff)
+
+			So(e, ShouldResemble, errors.New("hola"))
 		})
 	})
 }
