@@ -8,6 +8,9 @@ Multi-readers take input from multiple provided input streams in the order they
 are provided.  When one stream is consumed, the multi-reader will move on to and
 read from the next until all streams are consumed.
 
+The MultReadCloser type can also be configured to proactively close inputs as
+soon as they hit EOF.
+
 * `spipe.MultiReader`
 * `spipe.MultiReadCloser`
 
