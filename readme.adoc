@@ -1,0 +1,72 @@
+= Split Pipes
+
+Fork/Join writers and readers.
+
+== Multi-Readers
+
+Multi-readers take input from multiple provided input streams in the order they
+are provided.  When one stream is consumed, the multi-reader will move on to and
+read from the next until all streams are consumed.
+
+* `spipe.MultiReader`
+* `spipe.MultiReadCloser`
+
+.MultiReader
+[source,go]
+----
+package main
+
+import (
+  "fmt"
+  "strings"
+
+  "github.com/vulpine-io/split-pipe/v1/pkg/spipe"
+)
+
+func main() {
+  a := strings.NewReader("hello")
+  b := strings.NewReader("world")
+
+  reader := spipe.NewMultiReader(a, b)
+  buffer := make([]byte, 10)
+
+  reader.Read(buffer)
+
+  fmt.Println(string(buffer)) // helloworld
+}
+----
+
+== Split-Writers
+
+Split-writers take the written value and write it to all provided writers.  The
+split-writer has a primary writer and secondary writers.  The 'written bytes'
+value returned from writes comes solely from the primary writer.  Errors from
+secondary writers can be optionally ignored.
+
+* `spipe.SplitWriter`
+* `spipe.SplitWriteCloser`
+
+.SplitWriter
+[source,go]
+----
+package main
+
+import (
+  "fmt"
+  "strings"
+
+  "github.com/vulpine-io/split-pipe/v1/pkg/spipe"
+)
+
+func main() {
+  a := new(strings.Builder)
+  b := new(strings.Builder)
+
+  writer := spipe.NewSplitWriter(a, b)
+
+  writer.Write([]byte("greetings"))
+
+  fmt.Println(a.String()) // greetings
+  fmt.Println(b.String()) // greetings
+}
+----
