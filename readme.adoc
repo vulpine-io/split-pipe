@@ -2,7 +2,7 @@
 
 image:https://img.shields.io/github/workflow/status/vulpine-io/split-pipe/Go[GitHub Workflow Status, "https://github.com/vulpine-io/split-pipe/actions?query=workflow%3AGo"]
 image:https://img.shields.io/github/v/tag/vulpine-io/split-pipe?label=version[Latest Tag, link=https://github.com/vulpine-io/split-pipe/tags]
-image:https://img.shields.io/badge/go-docs-ff69b4["Go Doc", link="https://pkg.go.dev/github.com/vulpine-io/io-test"]
+image:https://img.shields.io/badge/go-docs-ff69b4["Go Doc", link="https://pkg.go.dev/github.com/vulpine-io/split-pipe"]
 image:https://goreportcard.com/badge/github.com/vulpine-io/split-pipe["Go Report Card", https://goreportcard.com/report/github.com/vulpine-io/split-pipe]
 image:https://codecov.io/gh/vulpine-io/split-pipe/branch/master/graph/badge.svg[codecov, https://codecov.io/gh/vulpine-io/split-pipe]
 
